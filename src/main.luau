@@ -15,7 +15,7 @@ local commands = {
 local parsed = args.parse({...})
 local commandName = parsed._[1]
 
-if commandName == nil or commandName == "help" or commandName == "--help" then
+if commandName == nil or commandName == "help" or parsed.help or parsed.h then
     print("Usage: xtpkg <init|add|remove|install|list|run> [arguments]")
     return
 end
