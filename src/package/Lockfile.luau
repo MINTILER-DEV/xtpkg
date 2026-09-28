@@ -10,9 +10,11 @@ local function quote(value) return '"' .. value:gsub("\\", "\\\\"):gsub('"', '\\
 function Lockfile.load(directory)
     if not fs.exists(filename(directory)) then return { lock_version = 1, packages = {} } end
     local ok, lock = pcall(toml.decode, fs.readSync(filename(directory)))
-    if not ok or type(lock) ~= "table" or lock.lock_version ~= 1 or type(lock.packages) ~= "table" then
+    if not ok or type(lock) ~= "table" or lock.lock_version ~= 1 then
         error("xtpkg.lock is malformed or uses an unsupported format")
     end
+    lock.packages = lock.packages or {}
+    if type(lock.packages) ~= "table" then error("xtpkg.lock is malformed or uses an unsupported format") end
     return lock
 end
 

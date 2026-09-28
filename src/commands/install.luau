@@ -8,8 +8,9 @@ local install = {}
 function install.run(_args)
     local cwd = process.cwd()
     local lock = Resolver.resolve(cwd, Manifest.load(cwd))
+    local previousLock = Lockfile.load(cwd)
+    Installer.install(cwd, previousLock, lock)
     Lockfile.save(cwd, lock)
-    Installer.install(cwd, lock)
     print("Wrote xtpkg.lock")
 end
 
