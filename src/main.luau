@@ -1,0 +1,2 @@
+-- XTPKG CLI entrypoint
+-- main.luau
