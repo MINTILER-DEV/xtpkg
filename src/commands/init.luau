@@ -6,34 +6,11 @@ local init = {}
 
 function init.run(args)
     local cwd = process.cwd()
-
-    if Manifest.exists(cwd) and not args.force and not args.f then
-        error("xtpkg.toml already exists (use --force to overwrite)")
-    end
-
-    -- `xtpkg init my-app`
-    -- otherwise use the current directory name
-    Manifest.create(cwd, {
-        name = args._[2] or path.basename(cwd),
-        force = args.force or args.f,
-    })
-
-    -- optional starter source
-    local src = path.join(cwd, "src")
-
-    if not fs.exists(src) then
-        fs.mkdir(src)
-    end
-
-    local entry = path.join(src, "main.luau")
-
-    if not fs.exists(entry) then
-        fs.writeFile(entry, [[
-        print("Hello from LuauXTX!")
-        ]])
-    end
-
+    Manifest.create(cwd, { name = args._[2] or path.basename(cwd), force = args.force or args.f })
     print("Created xtpkg.toml")
+    if not fs.exists(path.join(cwd, "src/main.luau")) then
+        print("Create src/main.luau to use the default start script (this LuauXTX runtime cannot create directories).")
+    end
 end
 
 return init
