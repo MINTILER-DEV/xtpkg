@@ -25,6 +25,9 @@ end
 
 function Util.relative(value)
     if type(value) ~= "string" or #value == 0 or #value > 240 or value:find("[\\:%c]") or value:sub(1, 1) == "/" then return false end
+    -- Portable ASCII names avoid Unicode case/normalization collisions and
+    -- Windows short-name aliases (e.g. LONGFI~1) when materializing a tree.
+    if not value:match("^[A-Za-z0-9_.+@ /()%-]+$") then return false end
     for _, part in ipairs(string.split(value, "/")) do
         if part == "" or part == "." or part == ".." or part:find('[<>"|?*]') or part:match("[ .]$") then return false end
         local stem = part:lower():match("^([^.]+)") or ""
