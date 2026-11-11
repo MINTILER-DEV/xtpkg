@@ -81,7 +81,7 @@ end
 function Source.gitSnapshot(url, revision, temporaryBase, allowLocal)
     if not Util.revision(revision) or (not Util.url(url) and not (allowLocal and path.isAbsolute(url))) then error("Git source requires a safe HTTPS URL and exact commit", 0) end
     Util.noLinks(temporaryBase); Util.mkdir(temporaryBase)
-    local work = path.join(temporaryBase, ".xtpkg-fetch-" .. Util.id()); Util.mkdir(work)
+    local work = path.join(temporaryBase, ".xtpkg-fetch-" .. Util.id()); fs.mkdir(work, false):await()
     local snapshot
     local ok, err = pcall(function()
         Util.git({ "init", "--bare", "." }, work)

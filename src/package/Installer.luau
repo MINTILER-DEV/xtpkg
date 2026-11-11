@@ -26,7 +26,7 @@ function Installer.install(directory, previous, lock, options)
     Util.noLinks(directory)
     local destination = path.join(directory, "packages"); checkOwned(destination, previous)
     local stage = path.join(directory, ".xtpkg-stage-" .. Util.id())
-    Util.mkdir(stage)
+    fs.mkdir(stage, false):await()
     local rollbacks, committed = {}, false
     local ok, err = pcall(function()
         local stagedPackages = path.join(stage, "packages"); Util.mkdir(stagedPackages)

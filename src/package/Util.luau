@@ -59,7 +59,7 @@ end
 function Util.git(arguments, cwd)
     local args = { "-c", "core.hooksPath=", "-c", "protocol.file.allow=always", "-c", "protocol.ext.allow=never" }
     for _, arg in ipairs(arguments) do table.insert(args, arg) end
-    local r = process.exec("git", args, { cwd = cwd, env = { GIT_TERMINAL_PROMPT = "0", GIT_CONFIG_NOSYSTEM = "1", GIT_CONFIG_GLOBAL = process.getenv("COMSPEC") and "NUL" or "/dev/null" } })
+    local r = process.exec("git", args, { cwd = cwd, env = { GIT_TERMINAL_PROMPT = "0", GIT_OPTIONAL_LOCKS = "0", GIT_CONFIG_NOSYSTEM = "1", GIT_CONFIG_GLOBAL = process.getenv("COMSPEC") and "NUL" or "/dev/null" } })
     if r.code ~= 0 then error("Git operation failed (" .. tostring(arguments[1]) .. "). Check the source URL, revision, and Git installation.", 0) end
     return r.stdout
 end
