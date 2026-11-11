@@ -72,4 +72,16 @@ function Util.noLinks(location)
     if r.code ~= 0 then error("Unsafe symbolic link/reparse point or inaccessible path: " .. location, 0) end
 end
 
+function Util.noLinksTree(location)
+    Util.noLinks(location)
+    if not fs.exists(location) then return end
+    local r
+    if process.getenv("COMSPEC") then
+        r = process.exec("powershell.exe", { "-NoProfile", "-NonInteractive", "-Command", "$ErrorActionPreference='Stop'; $q=New-Object 'Collections.Generic.Queue[string]'; $q.Enqueue($env:XTPKG_CHECK_PATH); $n=0; while($q.Count) { foreach($i in Get-ChildItem -LiteralPath $q.Dequeue() -Force) { if(($i.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) { exit 2 }; $n++; if($n -gt 100000) { exit 3 }; if($i.PSIsContainer) { $q.Enqueue($i.FullName) } } }" }, { env = { XTPKG_CHECK_PATH = location } })
+    else
+        r = process.exec("find", { "-P", location, "-type", "l", "-print" })
+    end
+    if r.code ~= 0 or r.stdout ~= "" then error("Unsafe links, excessive entries, or inaccessible tree: " .. location, 0) end
+end
+
 return Util

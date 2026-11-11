@@ -18,7 +18,7 @@ function Config.load()
     if not fs.exists(filename) then return {} end
     if fs.stat(filename):await().size > 65536 then error("Configuration exceeds size limit", 0) end
     local t = Json.decode(fs.readSync(filename), 65536)
-    if type(t) ~= "table" then error("Invalid configuration", 0) end
+    if not Json.object(t) then error("Invalid configuration", 0) end
     return t
 end
 function Config.validateRegistry(value)

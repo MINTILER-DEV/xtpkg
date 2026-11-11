@@ -23,7 +23,7 @@ function Cache.read(kind, key, limit)
     if not fs.exists(filename) then return nil end
     if fs.stat(filename):await().size > (limit or 2 * 1024 * 1024) then error("Cached data exceeds size limit", 0) end
     local envelope = Json.decode(fs.readSync(filename), limit)
-    if type(envelope) ~= "table" or envelope.key ~= key or type(envelope.data) ~= "table" or envelope.checksum ~= Util.sha(Json.encode(envelope.data)) then error("Corrupted " .. kind .. " cache; run xtpkg cache clean", 0) end
+    if not Json.object(envelope) or envelope.key ~= key or not Json.object(envelope.data) or envelope.checksum ~= Util.sha(Json.encode(envelope.data)) then error("Corrupted " .. kind .. " cache; run xtpkg cache clean", 0) end
     return envelope.data
 end
 function Cache.write(kind, key, data)

@@ -1,19 +1,33 @@
 -- Strict, bounded JSON for untrusted registry/cache input. Runtime serde/json
 -- currently accepts duplicate keys and does not decode Unicode escapes.
 local Json = {}
-local null = table.freeze({})
+-- Semantic tags also work when LuauXTX loads the same file through distinct
+-- non-canonical relative paths, creating separate module instances.
+local null = table.freeze(setmetatable({}, table.freeze({ __xtpkg_json_kind = "null" })))
+local arrayTag = table.freeze({ __xtpkg_json_kind = "array" })
 Json.null = null
+local function kind(v)
+    local meta = type(v) == "table" and getmetatable(v)
+    return type(meta) == "table" and meta.__xtpkg_json_kind or nil
+end
+function Json.object(v) return type(v) == "table" and kind(v) == nil end
 function Json.encode(v)
-    if v == null then return "null" end
+    if kind(v) == "null" then return "null" end
     local t = type(v)
     if t == "string" then
         return '"' .. v:gsub('[%z\1-\31\\"]', function(c)
             if c == '"' then return '\\"' elseif c == "\\" then return "\\\\" end
+            local escape = ({ ["\b"] = "\\b", ["\f"] = "\\f", ["\n"] = "\\n", ["\r"] = "\\r", ["\t"] = "\\t" })[c]
+            if escape then return escape end
             return string.format("\\u%04x", string.byte(c))
         end) .. '"'
     elseif t == "number" then assert(v == v and math.abs(v) < math.huge, "Non-finite JSON number"); return tostring(v)
     elseif t == "boolean" then return tostring(v)
     elseif t == "table" then
+        if kind(v) == "array" then
+            local out = {}; for _, item in ipairs(v) do table.insert(out, Json.encode(item)) end
+            return "[" .. table.concat(out, ",") .. "]"
+        end
         local keys, out = {}, {}
         for k in pairs(v) do assert(type(k) == "string", "JSON object keys must be strings"); table.insert(keys, k) end
         table.sort(keys)
@@ -64,7 +78,7 @@ function Json.decode(s, limit)
         if c == '"' then return str() end
         if c == "{" or c == "[" then
             local object = c == "{"; local close = object and "}" or "]"
-            local result, seen = {}, {}; i += 1; space()
+            local result, seen = object and {} or setmetatable({}, arrayTag), {}; i += 1; space()
             if s:sub(i, i) == close then i += 1; return result end
             while true do
                 space(); local key

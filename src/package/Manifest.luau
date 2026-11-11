@@ -18,6 +18,7 @@ end
 function Manifest.validate(manifest)
     if type(manifest) ~= "table" or type(manifest.package) ~= "table" then error("xtpkg.toml is missing [package]", 0) end
     local p = manifest.package
+    if p.native ~= nil or p.capabilities ~= nil then error("Native capabilities are not supported by this XTPKG version", 0) end
     if not Util.name(p.name) then error("Invalid package.name; use name or scope/name with lowercase letters, digits, hyphens, and underscores", 0) end
     SemVer.parse(p.version)
     if not Util.relative(p.entry) or not p.entry:match("%.luau?$") then error("package.entry must be a safe relative .lua or .luau file", 0) end

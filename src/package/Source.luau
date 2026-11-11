@@ -16,7 +16,7 @@ function Source.allowed(filename)
     if ext and ({ dll = true, so = true, dylib = true, exe = true, pem = true, key = true, pfx = true, wasm = true, zip = true, tar = true, gz = true })[ext] then error("Unsupported native, binary, archive, or sensitive package file: " .. filename, 0) end
 end
 function Source.validate(snapshot, expected)
-    if type(snapshot) ~= "table" or type(snapshot.files) ~= "table" then error("Malformed package snapshot", 0) end
+    if not Json.object(snapshot) or not Json.object(snapshot.files) then error("Malformed package snapshot", 0) end
     local bytes, count, seen = 0, 0, {}
     for filename, contents in pairs(snapshot.files) do
         Source.allowed(filename)
@@ -116,10 +116,14 @@ function Source.obtain(package, options)
     options = options or {}
     local key = Cache.packageKey(package)
     local snapshot = Cache.read("packages", key, 64 * 1024 * 1024)
-    if snapshot then Source.validate(snapshot, package); return snapshot end
+    local expected = { name = package.name, version = package.version, entry = package.entry, integrity = package.integrity, dependencies = package.requirements }
+    if snapshot then Source.validate(snapshot, expected); return snapshot end
     if options.offline or options.frozen then error("Verified cached artifact is missing for " .. package.name .. "@" .. package.version, 0) end
     if package.source:sub(1, 5) == "path:" then snapshot = Source.localSnapshot(package.source:sub(6))
-    else snapshot = Source.gitSnapshot(package.source:sub(5), package.revision, Cache.root(true), false) end
-    Source.validate(snapshot, package); Cache.write("packages", key, snapshot); return snapshot
+    else
+        if package.localSource and not options["allow-local-sources"] then error("Local Git fixtures require --allow-local-sources", 0) end
+        snapshot = Source.gitSnapshot(package.source:sub(5), package.revision, Cache.root(true), package.localSource == true)
+    end
+    Source.validate(snapshot, expected); Cache.write("packages", key, snapshot); return snapshot
 end
 return Source

@@ -5,6 +5,7 @@ local Manifest = require("../package/Manifest")
 local init = {}
 
 function init.run(args)
+    if args._[3] then error("Usage: xtpkg init [name] [--force]", 0) end
     local cwd = process.cwd()
     Manifest.create(cwd, { name = args._[2] or path.basename(cwd), force = args.force or args.f })
     local src = path.join(cwd, "src")
@@ -13,7 +14,7 @@ function init.run(args)
     if not fs.exists(entry) then
         fs.writeSync(entry, "print(\"Hello from LuauXTX!\")\n")
     end
-    print("Created xtpkg.toml")
+    args.log("Created xtpkg.toml")
 end
 
 return init

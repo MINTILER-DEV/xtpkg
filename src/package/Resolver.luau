@@ -70,7 +70,7 @@ function Resolver.resolve(directory, manifest, options)
         local data = registry():package(name); local versions = SemVer.sort(Util.keys(data.versions)); local list = {}
         for _, version in ipairs(versions) do
             local v = data.versions[version]
-            local p = { name = name, version = version, source = "git+" .. v.source.url, revision = v.source.revision, integrity = v.integrity, entry = v.entry, requirements = v.dependencies, dependencies = {}, registry = registry().base }
+            local p = { name = name, version = version, source = "git+" .. v.source.url, revision = v.source.revision, integrity = v.integrity, entry = v.entry, requirements = v.dependencies, dependencies = {}, registry = registry().base, localSource = not Util.url(v.source.url) and true or nil }
             if fits(p, requirements) then table.insert(list, p) end
         end
         local previous = options.previous and options.previous.packages[name]

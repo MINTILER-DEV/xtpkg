@@ -8,7 +8,7 @@ local Manifest = require("./Manifest")
 local Lockfile = {}
 function Lockfile.empty() return { lock_version = 2, roots = {}, packages = {} } end
 function Lockfile.validate(lock)
-    if type(lock) ~= "table" or lock.lock_version ~= 2 or type(lock.roots) ~= "table" or type(lock.packages) ~= "table" then error("Malformed or unsupported xtpkg.lock; run xtpkg install to regenerate it", 0) end
+    if not Json.object(lock) or lock.lock_version ~= 2 or not Json.object(lock.roots) or not Json.object(lock.packages) then error("Malformed or unsupported xtpkg.lock; run xtpkg install to regenerate it", 0) end
     local count = 0
     for name, spec in pairs(lock.roots) do
         if not Util.name(name) then error("Unsafe lockfile root identity", 0) end
@@ -18,13 +18,15 @@ function Lockfile.validate(lock)
     for name, p in pairs(lock.packages) do
         count += 1; if count > 256 then error("Too many locked packages", 0) end
         if not Util.name(name) or type(p) ~= "table" or p.name ~= name then error("Unsafe/contradictory lockfile package identity", 0) end
+        for _, flag in ipairs({ "external", "localSource" }) do if p[flag] ~= nil and type(p[flag]) ~= "boolean" then error("Invalid lockfile source flag", 0) end end
         SemVer.parse(p.version)
-        if type(p.source) ~= "string" or (p.source:sub(1, 5) ~= "path:" and (p.source:sub(1, 4) ~= "git+" or not Util.url(p.source:sub(5)))) then error("Unsafe lockfile source", 0) end
+        local localGit = p.localSource == true and type(p.registry) == "string" and path.isAbsolute(p.registry) and type(p.source) == "string" and path.isAbsolute(p.source:sub(5))
+        if type(p.source) ~= "string" or p.source:find("%c") or (p.source:sub(1, 5) ~= "path:" and (p.source:sub(1, 4) ~= "git+" or (not Util.url(p.source:sub(5)) and not localGit))) then error("Unsafe lockfile source", 0) end
         if p.source:sub(1, 5) == "path:" then
             if not path.isAbsolute(p.source:sub(6)) or p.revision ~= p.integrity then error("Invalid local snapshot identity", 0) end
         elseif not Util.revision(p.revision) then error("Lockfile needs an immutable Git commit", 0) end
         if not Util.checksum(p.integrity) or not Util.relative(p.entry) or not p.entry:match("%.luau?$") then error("Lockfile is missing verified integrity/entrypoint", 0) end
-        if type(p.dependencies) ~= "table" or type(p.requirements) ~= "table" then error("Missing lockfile dependency relationships", 0) end
+        if not Json.object(p.dependencies) or not Json.object(p.requirements) then error("Missing lockfile dependency relationships", 0) end
         for child, version in pairs(p.dependencies) do
             if not lock.packages[child] or lock.packages[child].version ~= version or not p.requirements[child] then error("Broken lockfile dependency relationship", 0) end
         end
@@ -32,7 +34,9 @@ function Lockfile.validate(lock)
             if not Util.name(child) or not p.dependencies[child] then error("Missing resolved dependency", 0) end
             Manifest.specification(spec)
             if not Util.pathSpec(spec) and spec:sub(1, 4) ~= "git+" and not SemVer.satisfies(lock.packages[child].version, spec) then error("Locked dependency violates its version range", 0) end
-            if (p.registry or p.external) and (Util.pathSpec(spec) or spec:sub(1, 4) == "git+") then error("Registry/Git packages must depend on registry version ranges", 0) end
+            if p.source:sub(1, 5) ~= "path:" and (Util.pathSpec(spec) or spec:sub(1, 4) == "git+") then error("Registry/Git packages must depend on registry version ranges", 0) end
+            if Util.pathSpec(spec) and lock.packages[child].source ~= "path:" .. Util.localPath(p.source:sub(6), spec) then error("Locked local dependency source does not match its declaration", 0) end
+            if spec:sub(1, 4) == "git+" and lock.packages[child].source .. "#" .. lock.packages[child].revision ~= spec then error("Locked Git dependency source does not match its declaration", 0) end
         end
     end
     local visiting, done = {}, {}
@@ -59,7 +63,7 @@ function Lockfile.matches(lock, manifest, directory)
     end
     return true
 end
-local fields = { "name", "version", "source", "revision", "integrity", "entry", "registry", "external", "requirements", "dependencies" }
+local fields = { "name", "version", "source", "revision", "integrity", "entry", "registry", "external", "localSource", "requirements", "dependencies" }
 function Lockfile.render(lock)
     Lockfile.validate(lock)
     local lines = { "lock_version = 2", "roots = " .. Json.encode(Json.encode(lock.roots)) }

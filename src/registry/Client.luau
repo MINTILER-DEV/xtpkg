@@ -11,7 +11,7 @@ function Client.new(options)
     options = options or {}
     local base = Config.validateRegistry(options.registry or Config.registry())
     if not base:match("^https://") then base = Util.absolute(process.cwd(), base) end
-    local self = { base = base, offline = options.offline or options.frozen, memory = {} }
+    local self = { base = base, offline = options.offline or options.frozen, memory = {}, allowLocal = options["allow-local-sources"] and not base:match("^https://") }
     function self:read(relative, validator)
         if self.memory[relative] then return self.memory[relative] end
         local key = self.base .. "/" .. relative
@@ -34,6 +34,15 @@ function Client.new(options)
             data = Json.decode(body)
         end
         data = validator(data)
+        if not self.offline and relative ~= "index.json" then
+            local previous = Cache.read("metadata", key)
+            if previous then
+                previous = validator(previous)
+                for version, record in pairs(previous.versions) do
+                    if not data.versions[version] or Json.encode(record) ~= Json.encode(data.versions[version]) then error("Registry changed or removed an immutable version: " .. data.name .. "@" .. version .. ". Contact the registry maintainer.", 0) end
+                end
+            end
+        end
         if not self.offline then Cache.write("metadata", key, data) end
         self.memory[relative] = data
         return data
@@ -57,7 +66,7 @@ function Client.new(options)
             end
             error('Package "' .. name .. '" was not found.' .. (#suggestions > 0 and " Did you mean: " .. table.concat(suggestions, ", ") .. "?" or "") .. " Run xtpkg search <term>.", 0)
         end
-        return self:read(record.path, function(data) return Metadata.validate(data, name) end)
+        return self:read(record.path, function(data) return Metadata.validate(data, name, self.allowLocal) end)
     end
     return self
 end

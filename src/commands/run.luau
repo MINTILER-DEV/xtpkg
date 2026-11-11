@@ -4,7 +4,7 @@ local run = {}
 
 function run.run(args)
     local script = args._[2]
-    if not script then error("Usage: xtpkg run <script>") end
+    if not script or args._[3] then error("Usage: xtpkg run <script>", 0) end
     local manifest = Manifest.load(process.cwd())
     local command = manifest.scripts[script]
     if not command then error("Script not found: " .. script) end
