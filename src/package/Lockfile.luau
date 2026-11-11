@@ -63,6 +63,20 @@ function Lockfile.matches(lock, manifest, directory)
     end
     return true
 end
+function Lockfile.prune(lock, manifest, directory)
+    for name, spec in pairs(manifest.dependencies) do
+        if lock.roots[name] ~= spec then return nil end
+        if Util.pathSpec(spec) and lock.packages[name].source ~= "path:" .. Util.localPath(directory, spec) then return nil end
+    end
+    local result = { lock_version = 2, roots = table.clone(manifest.dependencies), packages = {} }
+    local function visit(name)
+        if result.packages[name] then return end
+        result.packages[name] = table.clone(lock.packages[name])
+        for child in pairs(lock.packages[name].dependencies) do visit(child) end
+    end
+    for name in pairs(manifest.dependencies) do visit(name) end
+    return Lockfile.validate(result)
+end
 local fields = { "name", "version", "source", "revision", "integrity", "entry", "registry", "external", "localSource", "requirements", "dependencies" }
 function Lockfile.render(lock)
     Lockfile.validate(lock)

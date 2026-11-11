@@ -5,15 +5,15 @@ local Json = require("./Json")
 local Manifest = require("./Manifest")
 local Cache = require("./Cache")
 local Source = {}
-local ignored = { [".git"] = true, packages = true, node_modules = true, target = true, local_ = true }
+local ignored = { [".git"] = true, packages = true, node_modules = true, target = true }
 function Source.allowed(filename)
     if not Util.relative(filename) then error("Unsafe package path: " .. tostring(filename), 0) end
     for part in filename:gmatch("[^/]+") do
         local lower = part:lower()
-        if ignored[lower] or lower == "local" or lower:sub(1, 6) == ".xtpkg" or lower == ".env" or lower:sub(1, 5) == ".env." then error("Unnecessary or sensitive package file: " .. filename, 0) end
+        if ignored[lower] or lower == "local" or lower:sub(1, 6) == ".xtpkg" or lower == ".env" or lower:sub(1, 5) == ".env." or lower == "id_rsa" or lower == "id_ed25519" or lower == ".npmrc" or lower == ".netrc" then error("Unnecessary or sensitive package file: " .. filename, 0) end
     end
     local ext = filename:lower():match("%.([^.]+)$")
-    if ext and ({ dll = true, so = true, dylib = true, exe = true, pem = true, key = true, pfx = true, wasm = true, zip = true, tar = true, gz = true })[ext] then error("Unsupported native, binary, archive, or sensitive package file: " .. filename, 0) end
+    if ext and ({ dll = true, so = true, dylib = true, exe = true, lib = true, obj = true, a = true, o = true, node = true, pdb = true, pem = true, key = true, pfx = true, wasm = true, zip = true, tar = true, gz = true })[ext] then error("Unsupported native, binary, archive, or sensitive package file: " .. filename, 0) end
 end
 function Source.validate(snapshot, expected)
     if not Json.object(snapshot) or not Json.object(snapshot.files) then error("Malformed package snapshot", 0) end
@@ -114,6 +114,8 @@ function Source.gitSnapshot(url, revision, temporaryBase, allowLocal)
 end
 function Source.obtain(package, options)
     options = options or {}
+    if package.localSource and not options["allow-local-sources"] then error("Local Git fixtures require --allow-local-sources", 0) end
+    if package.external and not options["allow-git"] then error("External Git dependencies require --allow-git", 0) end
     local key = Cache.packageKey(package)
     local snapshot = Cache.read("packages", key, 64 * 1024 * 1024)
     local expected = { name = package.name, version = package.version, entry = package.entry, integrity = package.integrity, dependencies = package.requirements }
@@ -121,7 +123,6 @@ function Source.obtain(package, options)
     if options.offline or options.frozen then error("Verified cached artifact is missing for " .. package.name .. "@" .. package.version, 0) end
     if package.source:sub(1, 5) == "path:" then snapshot = Source.localSnapshot(package.source:sub(6))
     else
-        if package.localSource and not options["allow-local-sources"] then error("Local Git fixtures require --allow-local-sources", 0) end
         snapshot = Source.gitSnapshot(package.source:sub(5), package.revision, Cache.root(true), package.localSource == true)
     end
     Source.validate(snapshot, expected); Cache.write("packages", key, snapshot); return snapshot

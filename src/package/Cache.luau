@@ -52,7 +52,7 @@ function Cache.entries()
     table.sort(entries, function(a, b) return a.file < b.file end)
     return entries
 end
-function Cache.verify(validator)
+function Cache.verify(validator, metadataValidator)
     local entries = Cache.entries()
     for _, e in ipairs(entries) do
         if fs.stat(e.file):await().size > 64 * 1024 * 1024 then error("Oversized cache artifact", 0) end
@@ -60,6 +60,7 @@ function Cache.verify(validator)
         if type(envelope) ~= "table" or type(envelope.key) ~= "string" or path.basename(e.file) ~= Util.sha(envelope.key) .. ".json" then error("Corrupted cache identity", 0) end
         local data = Cache.read(e.kind, envelope.key, 64 * 1024 * 1024)
         if e.kind == "packages" and validator then validator(data) end
+        if e.kind == "metadata" and metadataValidator then metadataValidator(data, envelope.key) end
     end
     return #entries
 end

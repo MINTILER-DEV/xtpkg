@@ -43,7 +43,11 @@ function Util.id() return uuid.v4() end
 function Util.sha(value) return hash.sha256(value) end
 function Util.revision(value) return type(value) == "string" and #value == 40 and value:match("^[0-9a-f]+$") ~= nil end
 function Util.checksum(value) return type(value) == "string" and #value == 64 and value:match("^[0-9a-f]+$") ~= nil end
-function Util.pathSpec(s) return type(s) == "string" and (s:sub(1, 5) == "path:" or s:sub(1, 2) == "./" or s:sub(1, 3) == "../" or path.isAbsolute(s)) end
+function Util.pathSpec(s)
+    if type(s) ~= "string" then return false end
+    local normalized = s:gsub("\\", "/")
+    return normalized:sub(1, 5) == "path:" or normalized:sub(1, 2) == "./" or normalized:sub(1, 3) == "../" or path.isAbsolute(s)
+end
 function Util.localPath(base, s) return Util.absolute(base, s:sub(1, 5) == "path:" and s:sub(6) or s) end
 
 -- Credentials and non-HTTPS network transports are deliberately not accepted.

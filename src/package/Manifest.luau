@@ -67,7 +67,10 @@ function Manifest.render(manifest)
     end
     return table.concat(lines, "\n")
 end
-function Manifest.save(directory, manifest) fs.writeSync(path.join(directory, "xtpkg.toml"), Manifest.render(manifest)) end
+function Manifest.save(directory, manifest)
+    local filename = path.join(directory, "xtpkg.toml"); Util.noLinks(filename)
+    fs.writeSync(filename, Manifest.render(manifest))
+end
 function Manifest.create(directory, options)
     options = options or {}
     if Manifest.exists(directory) and not options.force then error("xtpkg.toml already exists (use --force to overwrite)", 0) end

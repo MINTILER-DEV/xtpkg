@@ -25,6 +25,7 @@ return { run = function(args)
     if args["dry-run"] then args.log("Dry run complete; no submission or project files were written."); return end
     local output = args.output or "xtpkg-submission.json"
     if not Util.relative(output) then error("--output must be a safe relative path inside the project", 0) end
+    Source.allowed(output)
     local destination = path.join(cwd, output); Util.noLinks(destination)
     if fs.exists(destination) then error("Submission output already exists: " .. output .. ". Choose a new --output path.", 0) end
     if not fs.exists(path.dirname(destination)) then error("Submission output parent directory does not exist", 0) end

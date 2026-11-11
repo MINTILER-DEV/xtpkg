@@ -17,7 +17,7 @@ end
 function Metadata.validate(data, name, allowLocal)
     if not Json.object(data) or data.name ~= name or not Util.name(name) then error("Registry package identity mismatch: " .. tostring(name), 0) end
     for _, field in ipairs({ "description", "repository" }) do
-        if type(data[field]) ~= "string" or #data[field] > 4096 then error("Invalid package metadata: " .. field, 0) end
+        if type(data[field]) ~= "string" or #data[field] > 4096 or data[field]:find("%c") then error("Invalid package metadata: " .. field, 0) end
     end
     if not Util.url(data.repository) then error("Invalid metadata repository URL", 0) end
     if not Json.object(data.versions) then error("Package metadata is missing versions", 0) end
@@ -46,7 +46,7 @@ function Metadata.index(data)
         if not Util.name(name) or type(record) ~= "table" or type(record.path) ~= "string" or not Util.relative(record.path) or not record.path:match("%.json$") then error("Unsafe or malformed registry index entry", 0) end
         if seen[record.path:lower()] then error("Duplicate registry metadata path", 0) end
         seen[record.path:lower()] = true
-        if record.description ~= nil and (type(record.description) ~= "string" or #record.description > 4096) then error("Invalid index description", 0) end
+        if record.description ~= nil and (type(record.description) ~= "string" or #record.description > 4096 or record.description:find("%c")) then error("Invalid index description", 0) end
     end
     return data
 end

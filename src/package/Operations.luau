@@ -22,7 +22,9 @@ function Operations.perform(options, edit, update)
         if (options.locked or options.frozen) and (not matches or update) then error("--locked/--frozen requires an existing current v2 lockfile; run xtpkg install first", 0) end
         local lock
         if matches and not update then lock = previous
-        else
+        elseif edit and previous and not previous.legacy and not update then lock = Lockfile.prune(previous, manifest, directory)
+        end
+        if not lock then
             if options.frozen then error("--frozen forbids dependency resolution", 0) end
             if options.log then options.log("Resolving dependencies...") end
             local resolveOptions = table.clone(options); resolveOptions.previous = previous and not previous.legacy and previous or nil; resolveOptions.update = update

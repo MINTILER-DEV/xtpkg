@@ -10,8 +10,10 @@ end
 function Config.cache()
     local explicit = process.getenv("XTPKG_CACHE_DIR")
     if explicit then return Util.absolute(process.cwd(), explicit) end
-    local base = process.getenv("LOCALAPPDATA") or process.getenv("XDG_CACHE_HOME")
-    return base and path.join(base, "xtpkg", "cache") or path.join(assert(process.getenv("HOME"), "Set XTPKG_CACHE_DIR"), ".cache", "xtpkg")
+    local windows, xdg = process.getenv("LOCALAPPDATA"), process.getenv("XDG_CACHE_HOME")
+    if windows then return path.join(windows, "xtpkg", "cache") end
+    if xdg then return path.join(xdg, "xtpkg") end
+    return path.join(assert(process.getenv("HOME"), "Set XTPKG_CACHE_DIR"), ".cache", "xtpkg")
 end
 function Config.load()
     local filename = path.join(Config.home(), "config.json"); Util.noLinks(filename)
