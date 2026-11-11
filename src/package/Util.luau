@@ -27,7 +27,7 @@ function Util.relative(value)
     if type(value) ~= "string" or #value == 0 or #value > 240 or value:find("[\\:%c]") or value:sub(1, 1) == "/" then return false end
     for _, part in ipairs(string.split(value, "/")) do
         if part == "" or part == "." or part == ".." or part:find('[<>"|?*]') or part:match("[ .]$") then return false end
-        local stem = part:lower():match("^([^.]+)")
+        local stem = part:lower():match("^([^.]+)") or ""
         if stem == "con" or stem == "prn" or stem == "aux" or stem == "nul" or stem:match("^com%d$") or stem:match("^lpt%d$") then return false end
     end
     return true
