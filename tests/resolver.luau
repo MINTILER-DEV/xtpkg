@@ -42,6 +42,9 @@ fails(function() M.decode('[package]\nname = "../bad"\nversion="1.0.0"\nentry="m
 fails(function() M.decode('[package]\nname="a"\nversion="01.0.0"\nentry="main.luau"') end, "Invalid semantic version")
 fails(function() M.decode('[package]\nname="a"\nversion="1.0.0"\nentry="../main.luau"') end, "safe relative")
 fails(function() V.index({ registry_version = 1, packages = { bad = { path = "../a.json" } } }) end, "Unsafe")
+fails(function() V.index(J.decode('{"registry_version":1,"packages":[]}')) end, "Invalid registry index")
+fails(function() V.dependencies(J.null) end, "must be an object")
+fails(function() V.dependencies(J.decode('[]')) end, "must be an object")
 local invalid = J.decode(J.encode(data["ex/a"])); invalid.versions["1.0.0"].source.revision = "main"
 fails(function() V.validate(invalid, "ex/a") end, "immutable")
 invalid = J.decode(J.encode(data["ex/a"])); invalid.versions["1.0.0"].dependencies = { bad = "path:../x" }
@@ -49,4 +52,7 @@ fails(function() V.validate(invalid, "ex/a") end, "Registry dependencies")
 local corrupt = J.decode(J.encode(lock)); corrupt.packages["ex/shared"].version = "1.0.0"
 fails(function() L.validate(corrupt) end, "relationship")
 check(L.matches(lock, manifest(lock.roots), process.cwd()))
+local pruned = L.prune(lock, manifest({ ["ex/b"] = "*" }), process.cwd())
+check(pruned.packages["ex/a"] == nil and pruned.packages["ex/shared"].version == "1.9.0")
+check(L.prune(lock, manifest({ ["ex/b"] = "^1.0.0" }), process.cwd()) == nil)
 print("Resolver/manifest/metadata checks passed: " .. count)
